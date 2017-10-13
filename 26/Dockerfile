@@ -6,7 +6,8 @@ ENV ANDROID_HOME /srv/var/android-sdk
 
 # Install required tools
 RUN apt-get --quiet update --yes \
-    && apt-get --quiet install --yes wget tar unzip lib32stdc++6 lib32z1 --no-install-recommends
+    && apt-get --quiet install --yes wget tar unzip lib32stdc++6 lib32z1 --no-install-recommends \
+    && apt-get install libqt5widgets5 --yes
 
 # Install Android SDK tools into ${ANDROID_HOME}
 RUN mkdir -p ${ANDROID_HOME}
@@ -25,11 +26,15 @@ RUN ln -s ${ANDROID_HOME}/tools/bin/sdkmanager /usr/bin/sdkmanager \
     && sdkmanager "platform-tools"
 
 # Emulator
-ENV EMULATOR_HOME /srv/var/emulator
+ENV EMULATOR_HOME /srv/var
 # Download emulator
 RUN wget https://dl.google.com/android/repository/emulator-linux-4077558.zip -O emulator.zip \
-    && unzip -q emulator.zip -d $EMULATOR_HOME \
+    && unzip -q emulator.zip -d ${EMULATOR_HOME} \
     && rm -f emulator.zip
+
+# Create a virtual device
+RUN ln -s ${EMULATOR_HOME}/emulator/emulator64-x86 /usr/bin/emulator64-x86 \
+    && ln -s ${ANDROID_HOME}/tools/bin/avdmanager /usr/bin/avdmanager
 
 # SDKs
 # Please keep these in descending order!
@@ -37,5 +42,8 @@ RUN echo y | sdkmanager \
     "platforms;android-26" \
     "build-tools;26.0.2"
 
-RUN ln -s ${EMULATOR_HOME}/emulator64-x86 /usr/bin/emulator64-x86 && \
-    emulator64-x86 -avd test -no-window -no-audio &
+RUN echo y | sdkmanager "system-images;android-26;google_apis;x86"
+
+RUN echo no | avdmanager create avd -n androidAVD --abi google_apis/x86 --package 'system-images;android-26;google_apis;x86'
+
+RUN emulator64-x86 -avd androidAVD -no-window -no-audio &
