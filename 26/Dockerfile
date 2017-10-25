@@ -4,10 +4,16 @@ MAINTAINER Maychell Oliveira <maychell.oliveira@codeminer42.com>
 # Android SDK
 ENV ANDROID_HOME /srv/var/android-sdk
 
-# Install required tools
-RUN apt-get --quiet update --yes \
-    && apt-get --quiet install --yes wget tar unzip lib32stdc++6 lib32z1 --no-install-recommends \
-    && apt-get install libqt5widgets5 --yes
+# Install dependencies
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+      wget \
+      tar \
+      unzip \
+      lib32stdc++6 \
+      lib32z1 \
+      libqt5widgets5 \
+      libqt5svg5
 
 # Install Android SDK tools into ${ANDROID_HOME}
 RUN mkdir -p ${ANDROID_HOME}
@@ -21,29 +27,19 @@ RUN wget --quiet --output-document=android-sdk.zip https://dl.google.com/android
 RUN mkdir -p ${ANDROID_HOME}/licenses \
     && echo 8933bad161af4178b1185d1a37fbf41ea5269c55 > ${ANDROID_HOME}/licenses/android-sdk-license
 
-# Install platform tools
+# Install Android SDK packages
 RUN ln -s ${ANDROID_HOME}/tools/bin/sdkmanager /usr/bin/sdkmanager \
-    && sdkmanager "platform-tools"
-
-# Emulator
-ENV EMULATOR_HOME /srv/var
-# Download emulator
-RUN wget https://dl.google.com/android/repository/emulator-linux-4077558.zip -O emulator.zip \
-    && unzip -q emulator.zip -d ${EMULATOR_HOME} \
-    && rm -f emulator.zip
+    && yes | sdkmanager \
+        "platform-tools" \
+        "platforms;android-26" \
+        "build-tools;26.0.2" \
+        "emulator" \
+        "system-images;android-26;google_apis;x86"
 
 # Create a virtual device
-RUN ln -s ${EMULATOR_HOME}/emulator/emulator64-x86 /usr/bin/emulator64-x86 \
+RUN ln -s ${EMULATOR_HOME}/emulator/emulator /usr/bin/emulator \
     && ln -s ${ANDROID_HOME}/tools/bin/avdmanager /usr/bin/avdmanager
-
-# SDKs
-# Please keep these in descending order!
-RUN echo y | sdkmanager \
-    "platforms;android-26" \
-    "build-tools;26.0.2"
-
-RUN echo y | sdkmanager "system-images;android-26;google_apis;x86"
 
 RUN echo no | avdmanager create avd -n androidAVD --abi google_apis/x86 --package 'system-images;android-26;google_apis;x86'
 
-RUN emulator64-x86 -avd androidAVD -no-window -no-audio &
+#RUN emulator64-x86 -avd androidAVD -no-window -no-audio &
